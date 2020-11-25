@@ -1,31 +1,12 @@
 import React, { createRef } from 'react';
 import './Board.css';
 
-class MapInfo {
-    startPos = undefined;
-    targetPos = undefined;
-    obstacles = [];
-
-    isThisObstacle = function (coordinates) {
-        return this.obstacles.findIndex(e => e[0] === coordinates[0] && e[1] === coordinates[1]) === -1 ? false : true;
-    }
-
-    isThisStartPos = function (coordinates) {
-        return this.startPos[0] === coordinates[0] && this.startPos[1] === coordinates[1];
-    }
-
-    isThisTargetPos = function (coordinates) {
-        return this.targetPos[0] === coordinates[0] && this.targetPos[1] === coordinates[1];
-    }
-}
-
 class Board extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {
-            mapInfo: new MapInfo()
-        }
-
+        // this.state = {
+        //     interval : 5
+        // }
         this.isRightButtonDown = false;
         this.isBuildObstacle = true;
 
@@ -34,12 +15,12 @@ class Board extends React.Component {
         this.canvasResize = this.canvasResize.bind(this);
         this.drawBoard = this.drawBoard.bind(this);
         this.drawBox = this.drawBox.bind(this);
+
     }
 
     componentDidMount() {
         this.canvasResize();
         this.drawBoard();
-
         let timeout = undefined;
         window.addEventListener("resize", (e) => {
             timeout && clearTimeout(timeout)
@@ -56,7 +37,7 @@ class Board extends React.Component {
 
         this.canvasRef.current.addEventListener("mousedown", (e) => {
             if (e.button === 2) {
-                this.isBuildObstacle = !this.state.mapInfo.isThisObstacle(this.convertCoordinates(e.x, e.y))
+                this.isBuildObstacle = !this.props.mapInfo.isThisObstacle(this.convertCoordinates(e.x, e.y))
                 this.isRightButtonDown = true;
                 console.log(this.isBuildObstacle);
             }
@@ -67,16 +48,16 @@ class Board extends React.Component {
                 const coordinates = this.convertCoordinates(e.x, e.y);
                 
                 if (this.isBuildObstacle) {
-                    if (this.state.mapInfo.isThisObstacle(coordinates) || 
+                    if (this.props.mapInfo.isThisObstacle(coordinates) || 
                         !this.setPos(coordinates, "obstacles") || 
-                        this.state.mapInfo.isThisTargetPos(coordinates) ||
-                        this.state.mapInfo.isThisStartPos(coordinates)) {
+                        this.props.mapInfo.isThisTargetPos(coordinates) ||
+                        this.props.mapInfo.isThisStartPos(coordinates)) {
                         return;
                     }
                     this.drawBox(coordinates, "gray");
                 }
                 else {
-                    if (!this.state.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
+                    if (!this.props.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
                         return;
                     this.drawBox(coordinates, "none");
 
@@ -105,37 +86,18 @@ class Board extends React.Component {
     }
 
     setPos(coordinates, setType) {
-
-
         switch (setType) {
             case "startPos":
-                this.setState({
-                    mapInfo: {
-                        ...this.state.mapInfo, startPos: coordinates
-                    }
-                })
+                this.props.mapInfo.setStartPos(coordinates);
                 return true;
             case "targetPos":
-                this.setState({
-                    mapInfo: {
-                        ...this.state.mapInfo, targetPos: coordinates
-                    }
-                })
+                this.props.mapInfo.setTargetPos(coordinates);
                 return true;
             case "obstacles":
-                this.setState({
-                    mapInfo: {
-                        ...this.state.mapInfo, obstacles: this.state.mapInfo.obstacles.concat([coordinates])
-                    }
-                })
+                this.props.mapInfo.setObstacle(coordinates);
                 return true;
             case "none":
-                this.setState({
-                    mapInfo: {
-                        ...this.state.mapInfo, obstacles:
-                            this.state.mapInfo.obstacles.filter(e => !(e[0] === coordinates[0] && e[1] === coordinates[1]))
-                    }
-                })
+                this.props.mapInfo.removeObstacle(coordinates);
                 return true;
             default :
                 return
@@ -208,11 +170,11 @@ class Board extends React.Component {
             ctx.stroke();
         }
 
-        console.log("DRAW BOARD", this.state.mapInfo)
-        this.state.mapInfo.startPos && this.drawBox(this.state.mapInfo.startPos, "red")
-        this.state.mapInfo.targetPos && this.drawBox(this.state.mapInfo.targetPos, "blue")
-        this.state.mapInfo.obstacles.length > 0 &&
-            this.state.mapInfo.obstacles.map((e) => this.drawBox(e, "gray"))
+        console.log("DRAW BOARD", this.props.mapInfo)
+        this.props.mapInfo.startPos && this.drawBox(this.props.mapInfo.startPos, "red")
+        this.props.mapInfo.targetPos && this.drawBox(this.props.mapInfo.targetPos, "blue")
+        this.props.mapInfo.obstacles.length > 0 &&
+            this.props.mapInfo.obstacles.map((e) => this.drawBox(e, "gray"))
     }
 
     canvasResize() {
@@ -227,6 +189,9 @@ class Board extends React.Component {
     }
 
     render() {
+        this.canvasResize();
+        this.drawBoard();
+        
         return <canvas ref={this.canvasRef} />
     }
 }
