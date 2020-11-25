@@ -4,9 +4,6 @@ import './Board.css';
 class Board extends React.Component {
     constructor(props) {
         super(props);
-        // this.state = {
-        //     interval : 5
-        // }
         this.isRightButtonDown = false;
         this.isBuildObstacle = true;
 
@@ -15,7 +12,6 @@ class Board extends React.Component {
         this.canvasResize = this.canvasResize.bind(this);
         this.drawBoard = this.drawBoard.bind(this);
         this.drawBox = this.drawBox.bind(this);
-
     }
 
     componentDidMount() {
@@ -40,6 +36,24 @@ class Board extends React.Component {
                 this.isBuildObstacle = !this.props.mapInfo.isThisObstacle(this.convertCoordinates(e.x, e.y))
                 this.isRightButtonDown = true;
                 console.log(this.isBuildObstacle);
+
+                const coordinates = this.convertCoordinates(e.x, e.y);
+                
+                if (this.isBuildObstacle) {
+                    if (this.props.mapInfo.isThisObstacle(coordinates) || 
+                        !this.setPos(coordinates, "obstacles") || 
+                        this.props.mapInfo.isThisTargetPos(coordinates) ||
+                        this.props.mapInfo.isThisStartPos(coordinates)) {
+                        return;
+                    }
+                    this.drawBox(coordinates, "gray");
+                }
+                else {
+                    if (!this.props.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
+                        return;
+                    this.drawBox(coordinates, "none");
+
+                }
             }
         })
 
@@ -170,11 +184,36 @@ class Board extends React.Component {
             ctx.stroke();
         }
 
-        console.log("DRAW BOARD", this.props.mapInfo)
-        this.props.mapInfo.startPos && this.drawBox(this.props.mapInfo.startPos, "red")
-        this.props.mapInfo.targetPos && this.drawBox(this.props.mapInfo.targetPos, "blue")
+        this.props.mapInfo.startPos && this.drawBox(this.props.mapInfo.startPos, "red");
+        this.props.mapInfo.targetPos && this.drawBox(this.props.mapInfo.targetPos, "blue");
         this.props.mapInfo.obstacles.length > 0 &&
             this.props.mapInfo.obstacles.map((e) => this.drawBox(e, "gray"))
+
+        if(this.props.searched){
+            let node = this.props.searched.findedNode;
+            ctx.beginPath();
+            ctx.lineWidth = 5;
+            ctx.moveTo(
+                node.x * this.props.interval + this.props.interval * 0.5, 
+                node.y * this.props.interval + this.props.interval * 0.5)
+            while(node.parent){
+                ctx.lineTo(
+                    node.x * this.props.interval + this.props.interval * 0.5, 
+                    node.y * this.props.interval + this.props.interval * 0.5);
+                node = node.parent;
+            }
+            ctx.lineTo(
+                node.x * this.props.interval + this.props.interval * 0.5, 
+                node.y * this.props.interval + this.props.interval * 0.5)
+            
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            this.props.searched.closedList.map((e) => this.drawBox([e.x,e.y], "rgba(0,0,255,0.3)"));
+
+
+
+        }
+   
     }
 
     canvasResize() {
@@ -182,7 +221,6 @@ class Board extends React.Component {
         let height = document.body.clientHeight || window.innerHeight || document.documentElement.clientHeight;
 
         if (this.canvasRef.current) {
-            console.log(this.canvasRef.current)
             this.canvasRef.current.width = width;
             this.canvasRef.current.height = height;
         }
@@ -191,7 +229,6 @@ class Board extends React.Component {
     render() {
         this.canvasResize();
         this.drawBoard();
-        
         return <canvas ref={this.canvasRef} />
     }
 }

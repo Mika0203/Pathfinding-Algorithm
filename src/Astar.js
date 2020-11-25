@@ -2,12 +2,16 @@ class Astar {
     startPos = undefined;
     targetPos = undefined;
     calc = 0;
+
     openlist = [];
     closedlist = [];
+    obstacles = [];
 
     start(start, target, obstacles){
         this.openlist = [];
         this.closedlist = [];
+        this.obstacles = obstacles;
+
         this.startPos = start;
         this.targetPos = target;
         this.calc = 1;
@@ -16,28 +20,26 @@ class Astar {
         this.openlist.push(node);
 
         while(true){
-            if(this.calc > 10000){
+            if(this.calc > 100000 || this.openlist.length === 0){
                 console.log("can't find..")
                 break;
             }
             
-
             this.calc++;
             this.closeNode(node);
             this.getAroundNodes(node);
             node = this.getNextNode();
 
             if(target[0] === node.x && target[1] === node.y){
-                
-                let findNode = node;
-                while(findNode){
-                    console.log(findNode.parent);
-                    findNode = findNode.parent;
-                }
-                console.log("FIND!",this.calc,"----------------------------");
                 break;
             }
         }
+
+        return {
+           findedNode : node,
+           closedList : this.closedlist
+        }
+            ;
 
     }
 
@@ -63,6 +65,7 @@ class Astar {
 
     getAroundNodes(node) {
         let nodeList = [];
+        
         nodeList.push(
             new Node([node.x-1, node.y], node),
             new Node([node.x+1, node.y], node),
@@ -71,6 +74,13 @@ class Astar {
         )
 
         nodeList.forEach(node => {
+            for(let i in this.obstacles){
+                let obs = this.obstacles[i];
+                if(obs[0] === node.x && obs[1] === node.y){
+                    return true;
+                }
+            }
+
             node.getCost(this.targetPos);
             if(this.checkOpenList(node))
                 this.openlist.push(node);
@@ -78,14 +88,15 @@ class Astar {
     }
 
     checkOpenList(currentNode){
-        // openlist 와 위치를 비교해서 같으면 g 값을 비교해서 g값이 더 낮은걸로 교체한다.
         let findedNode = undefined;
         let idx = -1;
+
         for(let i in this.openlist){
             let node = this.openlist[i];
             if(node.x === currentNode.x && node.y === currentNode.y){
                 findedNode = node;
                 idx = i;
+                break;
             }
         };
 
