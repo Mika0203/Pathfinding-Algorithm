@@ -5,16 +5,30 @@ class MapInfo {
     startPos = undefined;
     targetPos = undefined;
     obstacles = [];
+
+    isThisObstacle = function (coordinates) {
+        return this.obstacles.findIndex(e => e[0] === coordinates[0] && e[1] === coordinates[1]) === -1 ? false : true;
+    }
+
+    isThisStartPos = function (coordinates) {
+        return this.startPos[0] === coordinates[0] && this.startPos[1] === coordinates[1];
+    }
+
+    isThisTargetPos = function (coordinates) {
+        return this.targetPos[0] === coordinates[0] && this.targetPos[1] === coordinates[1];
+    }
 }
 
 class Board extends React.Component {
     constructor(props) {
         super(props);
-        this.state ={
-            mapInfo : new MapInfo()
+        this.state = {
+            mapInfo: new MapInfo()
         }
 
         this.isRightButtonDown = false;
+        this.isBuildObstacle = true;
+
         this.nextType = true;
         this.canvasRef = createRef();
         this.canvasResize = this.canvasResize.bind(this);
@@ -26,90 +40,140 @@ class Board extends React.Component {
         this.canvasResize();
         this.drawBoard();
 
-
         let timeout = undefined;
         window.addEventListener("resize", (e) => {
             timeout && clearTimeout(timeout)
-            timeout = setTimeout(() =>{
+            timeout = setTimeout(() => {
                 console.debug("Resized");
                 this.canvasResize();
                 this.drawBoard();
             }, 500);
         })
 
-        this.canvasRef.current.addEventListener('contextmenu', function(e) {
+        this.canvasRef.current.addEventListener('contextmenu', function (e) {
             e.preventDefault();
-          }, false);
+        }, false);
 
-        this.canvasRef.current.addEventListener("mousedown", (e) =>{
-            if(e.button === 2)
+        this.canvasRef.current.addEventListener("mousedown", (e) => {
+            if (e.button === 2) {
+                this.isBuildObstacle = !this.state.mapInfo.isThisObstacle(this.convertCoordinates(e.x, e.y))
                 this.isRightButtonDown = true;
+                console.log(this.isBuildObstacle);
+            }
         })
 
         this.canvasRef.current.addEventListener("mousemove", (e) => {
-            if(this.isRightButtonDown){
-                let x = Math.floor(e.x / this.props.interval);
-                let y = Math.floor(e.y / this.props.interval);
-                console.log(x, y)
+            if (this.isRightButtonDown) {
+                const coordinates = this.convertCoordinates(e.x, e.y);
                 
-                if (!this.setPos([x, y], "obstacles"))
-                    return;
-                this.drawBox([x,y],"gray");
+                if (this.isBuildObstacle) {
+                    if (this.state.mapInfo.isThisObstacle(coordinates) || 
+                        !this.setPos(coordinates, "obstacles") || 
+                        this.state.mapInfo.isThisTargetPos(coordinates) ||
+                        this.state.mapInfo.isThisStartPos(coordinates)) {
+                        return;
+                    }
+                    this.drawBox(coordinates, "gray");
+                }
+                else {
+                    if (!this.state.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
+                        return;
+                    this.drawBox(coordinates, "none");
+
+                }
+
             }
         })
 
         this.canvasRef.current.addEventListener('mouseup', (e) => {
-            if(e.button === 2)
+            if (e.button === 2)
                 this.isRightButtonDown = false;
 
-            if(e.button !== 0)
+            if (e.button !== 0)
                 return;
 
-            let x = Math.floor(e.x / this.props.interval);
-            let y = Math.floor(e.y / this.props.interval);
-            if (!this.setPos([x, y], this.nextType ? "startPos" : "targetPos"))
+            const coordinates = this.convertCoordinates(e.x, e.y);
+            if (!this.setPos(coordinates, this.nextType ? "startPos" : "targetPos"))
                 return;
             this.nextType = !this.nextType;
             this.clearBoard();
         })
     }
 
+    convertCoordinates = (x, y) => {
+        return [Math.floor(x / this.props.interval), Math.floor(y / this.props.interval)];
+    }
+
     setPos(coordinates, setType) {
-        if (setType === "startPos") {
-            this.setState({
-              mapInfo : {
-                   ...this.state.mapInfo, startPos : coordinates
-               }  
-            })
-            return true;
+
+
+        switch (setType) {
+            case "startPos":
+                this.setState({
+                    mapInfo: {
+                        ...this.state.mapInfo, startPos: coordinates
+                    }
+                })
+                return true;
+            case "targetPos":
+                this.setState({
+                    mapInfo: {
+                        ...this.state.mapInfo, targetPos: coordinates
+                    }
+                })
+                return true;
+            case "obstacles":
+                this.setState({
+                    mapInfo: {
+                        ...this.state.mapInfo, obstacles: this.state.mapInfo.obstacles.concat([coordinates])
+                    }
+                })
+                return true;
+            case "none":
+                this.setState({
+                    mapInfo: {
+                        ...this.state.mapInfo, obstacles:
+                            this.state.mapInfo.obstacles.filter(e => !(e[0] === coordinates[0] && e[1] === coordinates[1]))
+                    }
+                })
+                return true;
+            default :
+                return
         }
-        else if(setType === "targetPos"){
-            this.setState({
-               mapInfo : {
-                    ...this.state.mapInfo, targetPos : coordinates
-                }  
-             })
-            return true;
-        }
-        else if(setType === "obstacles"){
-            this.setState({
-                mapInfo : {
-                    ...this.state.mapInfo, obstacles : this.state.mapInfo.obstacles.concat([coordinates])
-                }  
-             })
-            return true;
-        }
+
     }
 
     drawBox(coordinates, color) {
         let ctx = this.canvasRef.current.getContext('2d');
         let interval = this.props.interval;
         ctx.beginPath();
-        ctx.fillStyle = color;
-        let x = coordinates[0];
-        let y = coordinates[1];
-        ctx.fillRect(x * interval, y * interval, interval, interval);
-        ctx.stroke();
+        if (color !== 'none') {
+            ctx.fillStyle = color;
+            ctx.lineWidth = "1";
+
+            ctx.fillRect(
+                coordinates[0] * interval,
+                coordinates[1] * interval,
+                interval, interval);
+            ctx.rect(
+                coordinates[0] * interval,
+                coordinates[1] * interval,
+                interval, interval)
+            ctx.stroke();
+        }
+        else {
+            ctx.lineWidth = "1";
+            ctx.clearRect(
+                coordinates[0] * interval,
+                coordinates[1] * interval,
+                interval, interval);
+            ctx.rect(
+                coordinates[0] * interval,
+                coordinates[1] * interval,
+                interval, interval)
+            ctx.stroke();
+
+        }
     }
 
     clearBoard() {
@@ -120,7 +184,7 @@ class Board extends React.Component {
     }
 
     drawBoard() {
-        if(!this.canvasRef.current)
+        if (!this.canvasRef.current)
             return;
 
         let ctx = this.canvasRef.current.getContext('2d');
@@ -147,15 +211,15 @@ class Board extends React.Component {
         console.log("DRAW BOARD", this.state.mapInfo)
         this.state.mapInfo.startPos && this.drawBox(this.state.mapInfo.startPos, "red")
         this.state.mapInfo.targetPos && this.drawBox(this.state.mapInfo.targetPos, "blue")
-        this.state.mapInfo.obstacles.length > 0 && 
+        this.state.mapInfo.obstacles.length > 0 &&
             this.state.mapInfo.obstacles.map((e) => this.drawBox(e, "gray"))
     }
 
     canvasResize() {
         let width = document.body.clientWidth || window.innerWidth || document.documentElement.clientWidth;
         let height = document.body.clientHeight || window.innerHeight || document.documentElement.clientHeight;
-        
-        if(this.canvasRef.current){
+
+        if (this.canvasRef.current) {
             console.log(this.canvasRef.current)
             this.canvasRef.current.width = width;
             this.canvasRef.current.height = height;
