@@ -1,9 +1,30 @@
-import MapInfo from "./MapInfo.js";
+import { coordinates } from "./lib";
+import MapInfo from "./MapInfo";
+
+enum NodeType {
+    startPos,
+    targetPos,
+    obstalce,
+    none
+}
 
 class Board {
-    constructor($target) {
+    canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D | null;
+    interval: number;
+    mapInfo: MapInfo;
+    timeout: NodeJS.Timeout | undefined;
+    isBuildObstacle: boolean;
+    isRightButtonDown: boolean;
+    nextType : boolean = true;
+
+    constructor($target: HTMLElement) {
+        this.isBuildObstacle = false;
+        this.isRightButtonDown = false;
+
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
+
         this.interval = 30;
         this.mapInfo = new MapInfo();
 
@@ -26,13 +47,16 @@ class Board {
         window.addEventListener('mousedown', (e) => {
             console.log(e.button);
             if (e.button === 2) {
-                this.isBuildObstacle = !this.mapInfo.isThisObstacle(this.convertCoordinates(e.x, e.y))
+                this.isBuildObstacle = !this.mapInfo.isThisObstacle(this.convertCoordinates({ x: e.x, y: e.y }));
                 this.isRightButtonDown = true;
-                const coordinates = this.convertCoordinates(e.x, e.y);
+                const coordinates = this.convertCoordinates({
+                    x: e.x,
+                    y: e.y
+                });
 
                 if (this.isBuildObstacle) {
                     if (this.mapInfo.isThisObstacle(coordinates) ||
-                        !this.setPos(coordinates, "obstacles") ||
+                        !this.setPos(coordinates, NodeType.obstalce) ||
                         this.mapInfo.isThisTargetPos(coordinates) ||
                         this.mapInfo.isThisStartPos(coordinates)) {
                         return;
@@ -40,7 +64,7 @@ class Board {
                     this.drawBox(coordinates, "gray");
                 }
                 else {
-                    if (!this.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
+                    if (!this.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, NodeType.none))
                         return;
                     this.drawBox(coordinates, "none");
                 }
@@ -49,11 +73,14 @@ class Board {
 
         window.addEventListener("mousemove", (e) => {
             if (this.isRightButtonDown) {
-                const coordinates = this.convertCoordinates(e.x, e.y);
+                const coordinates = this.convertCoordinates({
+                    x: e.x,
+                    y: e.y
+                });
 
                 if (this.isBuildObstacle) {
-                    if (this.mapInfo.isThisObstacle(coordinates) || 
-                        !this.setPos(coordinates, "obstacles") || 
+                    if (this.mapInfo.isThisObstacle(coordinates) ||
+                        !this.setPos(coordinates, NodeType.obstalce) ||
                         this.mapInfo.isThisTargetPos(coordinates) ||
                         this.mapInfo.isThisStartPos(coordinates)) {
                         return;
@@ -61,7 +88,7 @@ class Board {
                     this.drawBox(coordinates, "gray");
                 }
                 else {
-                    if (!this.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
+                    if (!this.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, NodeType.none))
                         return;
                     this.drawBox(coordinates, "none");
 
@@ -77,8 +104,12 @@ class Board {
             if (e.button !== 0)
                 return;
 
-            const coordinates = this.convertCoordinates(e.x, e.y);
-            if (!this.setPos(coordinates, this.nextType ? "startPos" : "targetPos"))
+            const coordinates = this.convertCoordinates({
+                x: e.x,
+                y: e.y
+            });
+
+            if (!this.setPos(coordinates, this.nextType ? NodeType.startPos : NodeType.targetPos))
                 return;
             this.nextType = !this.nextType;
             this.clearBoard();
@@ -88,63 +119,69 @@ class Board {
     clearBoard() {
         let width = this.canvas.width;
         let height = this.canvas.height;
-        this.context.clearRect(0, 0, width, height);
+        this.context && this.context.clearRect(0, 0, width, height);
         this.drawBoard();
     }
 
-    drawBox(coordinates, color) {
+    drawBox(coordinates: coordinates, color : string) {
         let ctx = this.context;
+        if(!ctx)
+            return;
+
         let interval = this.interval;
         ctx.beginPath();
         if (color !== 'none') {
             ctx.fillStyle = color;
-            ctx.lineWidth = "1";
+            ctx.lineWidth = 1;
 
             ctx.fillRect(
-                coordinates[0] * interval,
-                coordinates[1] * interval,
+                coordinates.x * interval,
+                coordinates.y * interval,
                 interval, interval);
             ctx.rect(
-                coordinates[0] * interval,
-                coordinates[1] * interval,
+                coordinates.x * interval,
+                coordinates.y * interval,
                 interval, interval)
             ctx.stroke();
         }
         else {
-            ctx.lineWidth = "1";
+            ctx.lineWidth = 1;
             ctx.clearRect(
-                coordinates[0] * interval,
-                coordinates[1] * interval,
+                coordinates.x * interval,
+                coordinates.y * interval,
                 interval, interval);
             ctx.rect(
-                coordinates[0] * interval,
-                coordinates[1] * interval,
+                coordinates.x * interval,
+                coordinates.y * interval,
                 interval, interval)
             ctx.stroke();
         }
     }
 
-    setPos(coordinates, setType) {
+    setPos(coordinates: coordinates, setType : NodeType) {
         switch (setType) {
-            case "startPos":
+            case NodeType.startPos :
                 this.mapInfo.setStartPos(coordinates);
                 return true;
-            case "targetPos":
+            case NodeType.targetPos:
                 this.mapInfo.setTargetPos(coordinates);
                 return true;
-            case "obstacles":
+            case NodeType.obstalce:
                 this.mapInfo.setObstacle(coordinates);
                 return true;
-            case "none":
+            case NodeType.none:
                 this.mapInfo.removeObstacle(coordinates);
                 return true;
-            default :
+            default:
                 return
         }
     }
 
-    convertCoordinates = (x, y) => {
-        return [Math.floor(x / this.interval), Math.floor(y / this.interval)];
+    convertCoordinates = (coordinates: coordinates): coordinates => {
+        return {
+            x: Math.floor(coordinates.x / this.interval),
+            y: Math.floor(coordinates.y / this.interval)
+        };
     }
 
     canvasResize() {
@@ -160,14 +197,15 @@ class Board {
 
 
     drawBoard() {
-
         let ctx = this.canvas.getContext('2d');
-        let width = this.canvas.width;
-        let height = this.canvas.height;
-        let interval = this.interval;
+        if(!ctx)
+            return;
+
+        const width = this.canvas.width;
+        const height = this.canvas.height;
 
         // Y
-        for (let i = 0; i < width; i += interval) {
+        for (let i = 0; i < width; i += this.interval) {
             ctx.beginPath();
             ctx.moveTo(i, 0);
             ctx.lineTo(i, height);
@@ -175,7 +213,7 @@ class Board {
         }
 
         // X
-        for (let i = 0; i < height; i += interval) {
+        for (let i = 0; i < height; i += this.interval) {
             ctx.beginPath();
             ctx.moveTo(0, i);
             ctx.lineTo(width, i);
@@ -187,49 +225,49 @@ class Board {
         this.mapInfo.obstacles.length > 0 &&
             this.mapInfo.obstacles.map((e) => this.drawBox(e, "gray"))
 
-        if (false) {
-            let node = this.props.searched.findedNode;
-            this.props.searched.closedList.map((e) => this.drawBox([e.x, e.y], "rgba(0,0,255,0.3)"));
-            this.props.searched.openList.map((e) => this.drawBox([e.x, e.y], "rgba(255,0,255,0.3)"));
+        // if (false) {
+        //     let node = this.props.searched.findedNode;
+        //     this.props.searched.closedList.map((e) => this.drawBox([e.x, e.y], "rgba(0,0,255,0.3)"));
+        //     this.props.searched.openList.map((e) => this.drawBox([e.x, e.y], "rgba(255,0,255,0.3)"));
 
 
-            // Text -------------------------
-            ctx.beginPath();
-            this.props.searched.closedList.map((e) => {
-                ctx.fillText("G : " + e.g,
-                    e.x * this.interval,
-                    e.y * this.interval + this.interval * 0.5 + 10)
-                ctx.fillText("H : " + e.h,
-                    e.x * this.interval,
-                    e.y * this.interval + this.interval * 0.5 + 20)
-                ctx.fillText("F : " + e.f,
-                    e.x * this.interval,
-                    e.y * this.interval + this.interval * 0.5)
-            })
-            ctx.stroke();
-            // -----------------------------------------
+        //     // Text -------------------------
+        //     ctx.beginPath();
+        //     this.props.searched.closedList.map((e) => {
+        //         ctx.fillText("G : " + e.g,
+        //             e.x * this.interval,
+        //             e.y * this.interval + this.interval * 0.5 + 10)
+        //         ctx.fillText("H : " + e.h,
+        //             e.x * this.interval,
+        //             e.y * this.interval + this.interval * 0.5 + 20)
+        //         ctx.fillText("F : " + e.f,
+        //             e.x * this.interval,
+        //             e.y * this.interval + this.interval * 0.5)
+        //     })
+        //     ctx.stroke();
+        //     // -----------------------------------------
 
-            // Line -------------------------------------
-            ctx.beginPath();
-            ctx.lineWidth = 5;
-            ctx.strokeStyle = "yellow"
-            ctx.moveTo(
-                node.x * this.interval + this.interval * 0.5,
-                node.y * this.interval + this.interval * 0.5)
-            while (node.parent) {
-                ctx.lineTo(
-                    node.x * this.interval + this.interval * 0.5,
-                    node.y * this.interval + this.interval * 0.5);
-                node = node.parent;
-            }
-            ctx.lineTo(
-                node.x * this.interval + this.interval * 0.5,
-                node.y * this.interval + this.interval * 0.5)
-            ctx.stroke();
-            // Line -------------------------------------
-            ctx.strokeStyle = "black"
-            ctx.lineWidth = 1;
-        }
+        //     // Line -------------------------------------
+        //     ctx.beginPath();
+        //     ctx.lineWidth = 5;
+        //     ctx.strokeStyle = "yellow"
+        //     ctx.moveTo(
+        //         node.x * this.interval + this.interval * 0.5,
+        //         node.y * this.interval + this.interval * 0.5)
+        //     while (node.parent) {
+        //         ctx.lineTo(
+        //             node.x * this.interval + this.interval * 0.5,
+        //             node.y * this.interval + this.interval * 0.5);
+        //         node = node.parent;
+        //     }
+        //     ctx.lineTo(
+        //         node.x * this.interval + this.interval * 0.5,
+        //         node.y * this.interval + this.interval * 0.5)
+        //     ctx.stroke();
+        //     // Line -------------------------------------
+        //     ctx.strokeStyle = "black"
+        //     ctx.lineWidth = 1;
+        // }
     }
 }
 
@@ -311,7 +349,7 @@ export default Board
 
 
 
-  
+
 
 //     }
 
