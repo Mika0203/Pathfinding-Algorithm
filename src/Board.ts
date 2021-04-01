@@ -6,8 +6,12 @@ enum NodeType {
     targetPos,
     obstalce,
     none
-}
+};
 
+interface BoardProps{
+    target : HTMLElement,
+    onMouseUp : Function,
+};
 class Board {
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D | null;
@@ -17,8 +21,10 @@ class Board {
     isBuildObstacle: boolean;
     isRightButtonDown: boolean;
     nextType : boolean = true;
+    props : BoardProps|undefined;
 
-    constructor($target: HTMLElement) {
+    constructor(props : BoardProps) {
+        this.props = props;
         this.isBuildObstacle = false;
         this.isRightButtonDown = false;
 
@@ -28,7 +34,7 @@ class Board {
         this.interval = 30;
         this.mapInfo = new MapInfo();
 
-        document.body.appendChild(this.canvas);
+        props.target.appendChild(this.canvas);
 
         this.canvasResize();
         this.timeout = undefined;
@@ -98,6 +104,8 @@ class Board {
         })
 
         window.addEventListener('mouseup', (e) => {
+            this.props?.onMouseUp();
+
             if (e.button === 2)
                 this.isRightButtonDown = false;
 
@@ -111,6 +119,7 @@ class Board {
 
             if (!this.setPos(coordinates, this.nextType ? NodeType.startPos : NodeType.targetPos))
                 return;
+
             this.nextType = !this.nextType;
             this.clearBoard();
         })

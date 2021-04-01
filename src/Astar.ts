@@ -10,7 +10,9 @@ class Astar {
     obstacles : Array<coordinates> = [];
     closedlist : Array<Node> = [];
 
-    start(start : coordinates, target : coordinates, obstacles : Array<coordinates>) {
+    start(start : coordinates, 
+        target : coordinates, 
+        obstacles : Array<coordinates>) {
         const startTime = new Date();
 
         this.openlist = [];
