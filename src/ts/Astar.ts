@@ -18,15 +18,15 @@ class Astar {
     private obstacles: Array<coordinates> = [];
     private closedlist: Array<Node> = [];
 
-    private _isCanCross: boolean = true;
-    private _isCanCorner: boolean = true;
+    private _isAllowDiagonal: boolean = true;
+    private _isCanCrossCorner: boolean = true;
 
-    set isCanCross(b: boolean) {
-        this._isCanCross = b;
+    set isAllowDiagonal(b: boolean) {
+        this._isAllowDiagonal = b;
     }
 
     set isCanCorner(b: boolean) {
-        this._isCanCorner = b;
+        this._isCanCrossCorner = b;
     }
 
     public start(mapInfo: MapInfo): startResponse {
@@ -132,7 +132,7 @@ class Astar {
             new Node({ x: node.position.x, y: node.position.y + 1 }, node) // down
         )
 
-        if (this._isCanCross) {
+        if (this._isAllowDiagonal) {
             nodeList.push(
                 new Node({ x: node.position.x + 1, y: node.position.y - 1 }, node),
                 new Node({ x: node.position.x + 1, y: node.position.y + 1 }, node),
@@ -152,7 +152,7 @@ class Astar {
                 return true;
             };
 
-            if(!this._isCanCorner && node.getDistance(currentNode.position) >= 20){
+            if(!this._isCanCrossCorner && node.getDistance(currentNode.position) >= 20){
                 const currentNodePosition = currentNode.position;
                 const regacyNodePosition = node.position;
 

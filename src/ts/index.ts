@@ -24,7 +24,7 @@ class App {
             target : $target,
             startSearch : () => this.startSearch(),
             onChangeIsCanPassCorner : (b : boolean) => this.Astar.isCanCorner = b,
-            onChangeIsCanPassCross : (b : boolean) => this.Astar.isCanCross = b
+            onChangeIsCanPassCross : (b : boolean) => this.Astar.isAllowDiagonal = b
         });
     };
 

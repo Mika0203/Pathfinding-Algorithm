@@ -60,8 +60,6 @@ class Board {
                     y: e.y
                 });
 
-                console.log(coordinates);
-
                 if (this.isBuildObstacle) {
                     if (this.mapInfo.isThisObstacle(coordinates) ||
                         !this.setPos(coordinates, NodeType.obstalce) ||
