@@ -104,12 +104,6 @@ class Astar {
 
         this.openlist.forEach(node => {
             if (node.f < minH) {
-                const dist = currentNode.getDistance(node.position)
-                if(this.isCanCorner && dist >= 20){
-                    return true;
-                }
-                console.log(dist);
-                
                 minH = node.f;
                 minNode = node;
                 isFind = true;
