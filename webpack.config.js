@@ -7,7 +7,7 @@ module.exports = {
     resolve: {
         extensions: [".js", ".ts", ".tsx"]
     },
-    entry: ["@babel/polyfill", "./index.ts"],
+    entry: ["@babel/polyfill", "./ts/index.ts"],
     output: {
         path: path.join(basePath, "dist"),
         filename: "bundle.js"
