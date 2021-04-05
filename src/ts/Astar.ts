@@ -50,6 +50,7 @@ class Astar {
 
         while (true) {
             if (this.calc > 100000 || this.openlist.length === 0 || !node) {
+                console.debug("can't find path..")
                 return {
                     isFind: false
                 };
@@ -68,6 +69,8 @@ class Astar {
             if (result.isFind) {
                 node = result.node;
             } else {
+                console.debug("can't find path..")
+                console.debug("can't find next node")
                 return {
                     isFind: false
                 };
@@ -170,7 +173,6 @@ class Astar {
                     obstacle.x === check2.x && obstacle.y === check2.y);
 
                 if(check1t >= 0 && check2t >= 0){
-                    console.log('스킵.',currentNode.position)
                     return true;
                 }
             }

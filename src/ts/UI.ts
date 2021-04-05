@@ -17,6 +17,7 @@ interface ButtonProps {
 
 export default class UI{
     ui : HTMLDivElement;
+    cornerLabel : HTMLLabelElement;
 
     constructor(props : UIProps){
         this.ui = document.createElement('div');
@@ -25,10 +26,13 @@ export default class UI{
 
         this.makeCheckLabel({
             innerText : '대각선 이동',
-            onChange : props.onChangeIsCanPassCross
+            onChange : (b : boolean) => {
+                props.onChangeIsCanPassCross(b);
+                (this.cornerLabel.querySelector('input') as HTMLInputElement).disabled = !b;
+            }
         });
 
-        this.makeCheckLabel({
+        this.cornerLabel = this.makeCheckLabel({
             innerText : '코너 통과',
             onChange : props.onChangeIsCanPassCorner
         });
@@ -53,7 +57,7 @@ export default class UI{
         this.ui.appendChild(btn_startSearch);
     };
 
-    makeCheckLabel(props : CheckBoxLabelProps){
+    makeCheckLabel(props : CheckBoxLabelProps) : HTMLLabelElement {
         const $label = document.createElement('label');
         const $check = document.createElement('input');
         const $text = document.createElement('span');
@@ -66,5 +70,7 @@ export default class UI{
         $label.appendChild($check);
         $label.appendChild($text);
         this.ui.appendChild($label);
+
+        return $label;
     }
 }
