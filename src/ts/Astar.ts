@@ -120,7 +120,7 @@ class Astar {
     }
 
     private getAroundNodes(node: Node) {
-        let nodeList = [];
+        const nodeList = [];
 
         nodeList.push(
             new Node({ x: node.position.x - 1, y: node.position.y }, node), // left
@@ -138,18 +138,47 @@ class Astar {
             )
         }
 
-        nodeList.forEach(node => {
+        nodeList.forEach(currentNode => {
             if (this.obstacles.findIndex(obstacle =>
-                obstacle.x === node.position.x && obstacle.y === node.position.y) !== -1)
+                obstacle.x === currentNode.position.x && obstacle.y === currentNode.position.y) !== -1)
                 return true;
 
             if (this.closedlist.findIndex(closeNode =>
-                closeNode.position.x === node.position.x && closeNode.position.y === node.position.y) !== -1) {
+                closeNode.position.x === currentNode.position.x && 
+                closeNode.position.y === currentNode.position.y) !== -1) {
                 return true;
+            };
+
+            if(!this._isCanCorner && node.getDistance(currentNode.position) >= 20){
+                const currentNodePosition = currentNode.position;
+                const regacyNodePosition = node.position;
+
+                const check1 : coordinates = {
+                    x : currentNodePosition.x,
+                    y : regacyNodePosition.y
+                };
+
+                const check2 : coordinates = {
+                    x : regacyNodePosition.x,
+                    y : currentNodePosition.y
+                }
+
+                const check1t = this.obstacles.findIndex(obstacle =>
+                    obstacle.x === check1.x && obstacle.y === check1.y);
+
+                const check2t = this.obstacles.findIndex(obstacle =>
+                    obstacle.x === check2.x && obstacle.y === check2.y);
+
+                if(check1t >= 0 && check2t >= 0){
+                    console.log('스킵.',currentNode.position)
+                    return true;
+                }
             }
-            node.getCost(this.targetPos);
-            if (this.checkOpenList(node))
-                this.openlist.push(node);
+
+            currentNode.getCost(this.targetPos);
+            
+            if (this.checkOpenList(currentNode))
+                this.openlist.push(currentNode);
         });
     }
 

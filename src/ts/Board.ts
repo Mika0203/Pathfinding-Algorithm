@@ -52,7 +52,6 @@ class Board {
         }, false);
 
         this.canvas.addEventListener('mousedown', (e) => {
-            console.log(e.button);
             if (e.button === 2) {
                 this.isBuildObstacle = !this.mapInfo.isThisObstacle(this.convertCoordinates({ x: e.x, y: e.y }));
                 this.isRightButtonDown = true;
@@ -60,6 +59,8 @@ class Board {
                     x: e.x,
                     y: e.y
                 });
+
+                console.log(coordinates);
 
                 if (this.isBuildObstacle) {
                     if (this.mapInfo.isThisObstacle(coordinates) ||
