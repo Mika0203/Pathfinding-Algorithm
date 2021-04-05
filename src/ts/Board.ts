@@ -9,19 +9,20 @@ enum NodeType {
 };
 
 interface BoardProps{
-    target : HTMLElement,
-    onMouseUp : Function,
+    target : HTMLElement;
+    mapInfo : MapInfo;
 };
+
 class Board {
-    canvas: HTMLCanvasElement;
-    context: CanvasRenderingContext2D | null;
-    interval: number;
-    mapInfo: MapInfo;
-    timeout: NodeJS.Timeout | undefined;
-    isBuildObstacle: boolean;
-    isRightButtonDown: boolean;
-    nextType : boolean = true;
-    props : BoardProps|undefined;
+    private canvas: HTMLCanvasElement;
+    private context: CanvasRenderingContext2D | null;
+    private interval: number;
+    private timeout: NodeJS.Timeout | undefined;
+    private isBuildObstacle: boolean;
+    private isRightButtonDown: boolean;
+    private nextType : boolean = true;
+    private props : BoardProps|undefined;
+    private mapInfo : MapInfo;
 
     constructor(props : BoardProps) {
         this.props = props;
@@ -32,7 +33,7 @@ class Board {
         this.context = this.canvas.getContext('2d');
 
         this.interval = 30;
-        this.mapInfo = new MapInfo();
+        this.mapInfo = props.mapInfo;
 
         props.target.appendChild(this.canvas);
 
@@ -46,11 +47,11 @@ class Board {
             }, 500);
         });
 
-        window.addEventListener('contextmenu', (e) => {
+        this.canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         }, false);
 
-        window.addEventListener('mousedown', (e) => {
+        this.canvas.addEventListener('mousedown', (e) => {
             console.log(e.button);
             if (e.button === 2) {
                 this.isBuildObstacle = !this.mapInfo.isThisObstacle(this.convertCoordinates({ x: e.x, y: e.y }));
@@ -77,7 +78,7 @@ class Board {
             }
         })
 
-        window.addEventListener("mousemove", (e) => {
+        this.canvas.addEventListener("mousemove", (e) => {
             if (this.isRightButtonDown) {
                 const coordinates = this.convertCoordinates({
                     x: e.x,
@@ -103,9 +104,7 @@ class Board {
             }
         })
 
-        window.addEventListener('mouseup', (e) => {
-            this.props?.onMouseUp();
-
+        this.canvas.addEventListener('mouseup', (e) => {
             if (e.button === 2)
                 this.isRightButtonDown = false;
 
@@ -125,15 +124,15 @@ class Board {
         })
     }
 
-    clearBoard() {
+    private clearBoard() {
         let width = this.canvas.width;
         let height = this.canvas.height;
         this.context && this.context.clearRect(0, 0, width, height);
         this.drawBoard();
     }
 
-    drawBox(coordinates: coordinates, color : string) {
-        let ctx = this.context;
+    private drawBox(coordinates: coordinates, color : string) {
+        const ctx = this.context;
         if(!ctx)
             return;
 
@@ -167,16 +166,16 @@ class Board {
         }
     }
 
-    setPos(coordinates: coordinates, setType : NodeType) {
+    private setPos(coordinates: coordinates, setType : NodeType) {
         switch (setType) {
             case NodeType.startPos :
-                this.mapInfo.setStartPos(coordinates);
+                this.mapInfo.startPos = coordinates;
                 return true;
             case NodeType.targetPos:
-                this.mapInfo.setTargetPos(coordinates);
+                this.mapInfo.targetPos = coordinates;
                 return true;
             case NodeType.obstalce:
-                this.mapInfo.setObstacle(coordinates);
+                this.mapInfo.addObstacle(coordinates);
                 return true;
             case NodeType.none:
                 this.mapInfo.removeObstacle(coordinates);
@@ -186,14 +185,14 @@ class Board {
         }
     }
 
-    convertCoordinates = (coordinates: coordinates): coordinates => {
+    private convertCoordinates = (coordinates: coordinates): coordinates => {
         return {
             x: Math.floor(coordinates.x / this.interval),
             y: Math.floor(coordinates.y / this.interval)
         };
     }
 
-    canvasResize() {
+    private canvasResize() {
         let width = document.body.clientWidth || window.innerWidth || document.documentElement.clientWidth;
         let height = document.body.clientHeight || window.innerHeight || document.documentElement.clientHeight;
 
@@ -204,8 +203,7 @@ class Board {
         this.drawBoard();
     };
 
-
-    drawBoard() {
+    private drawBoard() {
         let ctx = this.canvas.getContext('2d');
         if(!ctx)
             return;
@@ -233,146 +231,32 @@ class Board {
         this.mapInfo.targetPos && this.drawBox(this.mapInfo.targetPos, "blue");
         this.mapInfo.obstacles.length > 0 &&
             this.mapInfo.obstacles.map((e) => this.drawBox(e, "gray"))
+    };
 
-        // if (false) {
-        //     let node = this.props.searched.findedNode;
-        //     this.props.searched.closedList.map((e) => this.drawBox([e.x, e.y], "rgba(0,0,255,0.3)"));
-        //     this.props.searched.openList.map((e) => this.drawBox([e.x, e.y], "rgba(255,0,255,0.3)"));
+    public drawPath(path : coordinates[]) {
+        this.clearBoard();
 
+        const ctx = this.context;
+        if(!ctx)
+            return;
 
-        //     // Text -------------------------
-        //     ctx.beginPath();
-        //     this.props.searched.closedList.map((e) => {
-        //         ctx.fillText("G : " + e.g,
-        //             e.x * this.interval,
-        //             e.y * this.interval + this.interval * 0.5 + 10)
-        //         ctx.fillText("H : " + e.h,
-        //             e.x * this.interval,
-        //             e.y * this.interval + this.interval * 0.5 + 20)
-        //         ctx.fillText("F : " + e.f,
-        //             e.x * this.interval,
-        //             e.y * this.interval + this.interval * 0.5)
-        //     })
-        //     ctx.stroke();
-        //     // -----------------------------------------
+        const getCenter = (coordinate : coordinates) : coordinates => {
+            return {
+                x : coordinate.x * this.interval + this.interval * 0.5,
+                y : coordinate.y * this.interval + this.interval * 0.5
+            }
+        }
+        
+        const center = getCenter(path[0]);
+        ctx.moveTo(center.x, center.y);
+        
+        path.forEach(coordinate => {
+            const center = getCenter(coordinate);
+            ctx.lineTo(center.x, center.y);
+        });
 
-        //     // Line -------------------------------------
-        //     ctx.beginPath();
-        //     ctx.lineWidth = 5;
-        //     ctx.strokeStyle = "yellow"
-        //     ctx.moveTo(
-        //         node.x * this.interval + this.interval * 0.5,
-        //         node.y * this.interval + this.interval * 0.5)
-        //     while (node.parent) {
-        //         ctx.lineTo(
-        //             node.x * this.interval + this.interval * 0.5,
-        //             node.y * this.interval + this.interval * 0.5);
-        //         node = node.parent;
-        //     }
-        //     ctx.lineTo(
-        //         node.x * this.interval + this.interval * 0.5,
-        //         node.y * this.interval + this.interval * 0.5)
-        //     ctx.stroke();
-        //     // Line -------------------------------------
-        //     ctx.strokeStyle = "black"
-        //     ctx.lineWidth = 1;
-        // }
+        ctx.stroke();
     }
 }
 
 export default Board
-
-
-// class Board extends React.Component {
-//     constructor(props) {
-//         super(props);
-//         this.isRightButtonDown = false;
-//         this.isBuildObstacle = true;
-
-//         this.nextType = true;
-//         this.canvas = createRef();
-//         this.canvasResize = this.canvasResize.bind(this);
-//         this.drawBoard = this.drawBoard.bind(this);
-//         this.drawBox = this.drawBox.bind(this);
-//     }
-
-//     componentDidMount() {
-//         this.canvasResize();
-//         this.drawBoard();
-//         let timeout = undefined;
-
-
-//         this.canvas.current.addEventListener('contextmenu', function (e) {
-//             e.preventDefault();
-//         }, false);
-
-//         this.canvas.current.addEventListener("mousedown", (e) => {
-//             if (e.button === 2) {
-//                 this.isBuildObstacle = !this.mapInfo.isThisObstacle(this.convertCoordinates(e.x, e.y))
-//                 this.isRightButtonDown = true;
-//                 const coordinates = this.convertCoordinates(e.x, e.y);
-
-//                 if (this.isBuildObstacle) {
-//                     if (this.mapInfo.isThisObstacle(coordinates) || 
-//                         !this.setPos(coordinates, "obstacles") || 
-//                         this.mapInfo.isThisTargetPos(coordinates) ||
-//                         this.mapInfo.isThisStartPos(coordinates)) {
-//                         return;
-//                     }
-//                     this.drawBox(coordinates, "gray");
-//                 }
-//                 else {
-//                     if (!this.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
-//                         return;
-//                     this.drawBox(coordinates, "none");
-
-//                 }
-//             }
-//         })
-
-//         this.canvas.current.addEventListener("mousemove", (e) => {
-//             if (this.isRightButtonDown) {
-//                 const coordinates = this.convertCoordinates(e.x, e.y);
-
-//                 if (this.isBuildObstacle) {
-//                     if (this.mapInfo.isThisObstacle(coordinates) || 
-//                         !this.setPos(coordinates, "obstacles") || 
-//                         this.mapInfo.isThisTargetPos(coordinates) ||
-//                         this.mapInfo.isThisStartPos(coordinates)) {
-//                         return;
-//                     }
-//                     this.drawBox(coordinates, "gray");
-//                 }
-//                 else {
-//                     if (!this.mapInfo.isThisObstacle(coordinates) || !this.setPos(coordinates, "none"))
-//                         return;
-//                     this.drawBox(coordinates, "none");
-
-//                 }
-
-//             }
-//         })
-
-
-//     }
-
-
-
-
-
-//     }
-
-
-
-
-
-//     
-
-
-
-//     render() {
-//         this.canvasResize();
-//         this.drawBoard();
-//         return <canvas ref={this.canvas} />
-//     }
-// }
